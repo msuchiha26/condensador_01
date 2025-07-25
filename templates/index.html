@@ -64,7 +64,7 @@
 
         document.getElementById("mensaje").textContent = "";
 
-        // Define el orden personalizado para las columnas:
+        // Orden personalizado de columnas:
         const columnasOrdenadas = [
           "id",
           "timestamp",
@@ -81,7 +81,7 @@
         ];
 
         if (!tablaDataTable) {
-          // Crear encabezados con el orden definido
+          // Crear encabezados
           document.getElementById("headers").innerHTML = columnasOrdenadas.map(h => `<th>${h}</th>`).join("");
 
           tablaDataTable = $('#tabla').DataTable({
@@ -89,7 +89,7 @@
             columns: columnasOrdenadas.map(c => ({ data: c })),
             pageLength: 10,
             lengthMenu: [5, 10, 25, 50],
-            order: [[0, "desc"]] // Ordenar por id descendente
+            order: [[0, "desc"]] // ordenar por id descendente
           });
         } else {
           tablaDataTable.clear();
@@ -115,3 +115,4 @@
   </script>
 </body>
 </html>
+
