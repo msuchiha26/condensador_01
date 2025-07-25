@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: condensador_01
+    env: python
+    buildCommand: ""
+    startCommand: "python app.py"

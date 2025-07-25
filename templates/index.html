@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Datos de Sensores</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f7f7f7; }
+    table { border-collapse: collapse; width: 100%; background: white; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+    th { background-color: #eaeaea; }
+    button {
+      margin: 10px 0;
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #mensaje {
+      margin-top: 20px;
+      font-style: italic;
+      color: gray;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Lecturas de Sensores</h1>
+  <button onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
+  <table id="tabla">
+    <thead>
+      <tr id="headers"></tr>
+    </thead>
+    <tbody id="datos"></tbody>
+  </table>
+  <p id="mensaje"></p>
+
+  <script>
+    async function cargarDatos() {
+      try {
+        const res = await fetch("/api/data");
+        const data = await res.json();
+
+        const tabla = document.getElementById("tabla");
+        const headers = Object.keys(data[0] || {});
+
+        // Encabezados solo la primera vez
+        const headersHTML = headers.map(h => `<th>${h}</th>`).join("");
+        document.getElementById("headers").innerHTML = headersHTML;
+
+        // Cuerpo de la tabla
+        const bodyHTML = data.map(row =>
+          `<tr>${headers.map(h => `<td>${row[h]}</td>`).join("")}</tr>`
+        ).join("");
+        document.getElementById("datos").innerHTML = bodyHTML;
+
+        document.getElementById("mensaje").textContent = data.length
+          ? ""
+          : "⚠️ No hay datos disponibles.";
+
+      } catch (error) {
+        console.error("Error al obtener datos:", error);
+        document.getElementById("mensaje").textContent =
+          "Error al cargar datos del servidor.";
+      }
+    }
+
+    function descargarCSV() {
+      window.location.href = "/descargar_csv";
+      setTimeout(() => location.reload(), 3000);
+    }
+
+    // Primera carga + actualización periódica
+    cargarDatos();
+    setInterval(cargarDatos, 5000);  // 🔄 Cada 5 segundos
+  </script>
+</body>
+</html>
