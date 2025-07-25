@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, send_file
 import mysql.connector
 import csv
 import io
+import os
 
 app = Flask(__name__)
 
@@ -41,10 +42,9 @@ def descargar_csv():
     writer = csv.writer(output)
     writer.writerow(column_names)
     writer.writerows(rows)
-
     output.seek(0)
 
-    # 🧹 Borrar datos después de generar CSV
+    # 🧹 Borrar datos después de exportar
     cursor.execute("DELETE FROM lecturas2")
     conn.commit()
 
@@ -59,4 +59,6 @@ def descargar_csv():
     )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # 🔧 Usar el puerto asignado por Render o 10000 por defecto
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
