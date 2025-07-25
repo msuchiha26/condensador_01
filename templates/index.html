@@ -2,70 +2,82 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Datos de Sensores</title>
+  <title>Última Lectura</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background-color: #f7f7f7; }
-    table { border-collapse: collapse; width: 100%; background: white; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
-    th { background-color: #eaeaea; }
-    button {
-      margin: 10px 0;
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f8f8f8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+    }
+    .btn {
+      margin-top: 20px;
       padding: 10px 15px;
-      font-size: 16px;
       background-color: #007BFF;
       color: white;
+      font-size: 16px;
       border: none;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
     }
-    button:hover {
+    .btn:hover {
       background-color: #0056b3;
-    }
-    #mensaje {
-      margin-top: 20px;
-      font-style: italic;
-      color: gray;
     }
   </style>
 </head>
 <body>
-  <h1>📊 Lecturas de Sensores</h1>
-  <button onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
+  <h1>📈 Última Lectura Registrada</h1>
+  <button class="btn" onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
   <table id="tabla">
     <thead>
       <tr id="headers"></tr>
     </thead>
-    <tbody id="datos"></tbody>
+    <tbody>
+      <tr id="fila"></tr>
+    </tbody>
   </table>
-  <p id="mensaje"></p>
+  <p id="mensaje" style="margin-top: 20px; color: gray;"></p>
 
   <script>
-    async function cargarDatos() {
+    async function cargarUltimoDato() {
       try {
-        const res = await fetch("/api/data");
+        const res = await fetch("/api/ultimo");
         const data = await res.json();
 
-        const tabla = document.getElementById("tabla");
-        const headers = Object.keys(data[0] || {});
+        if (!data || Object.keys(data).length === 0) {
+          document.getElementById("mensaje").textContent = "⏳ Aún no hay datos.";
+          return;
+        }
 
-        // Encabezados solo la primera vez
-        const headersHTML = headers.map(h => `<th>${h}</th>`).join("");
-        document.getElementById("headers").innerHTML = headersHTML;
+        const headers = Object.keys(data);
+        const values = Object.values(data);
 
-        // Cuerpo de la tabla
-        const bodyHTML = data.map(row =>
-          `<tr>${headers.map(h => `<td>${row[h]}</td>`).join("")}</tr>`
-        ).join("");
-        document.getElementById("datos").innerHTML = bodyHTML;
+        if (document.getElementById("headers").children.length === 0) {
+          document.getElementById("headers").innerHTML =
+            headers.map(h => `<th>${h}</th>`).join("");
+        }
 
-        document.getElementById("mensaje").textContent = data.length
-          ? ""
-          : "⚠️ No hay datos disponibles.";
+        document.getElementById("fila").innerHTML =
+          values.map(v => `<td>${v}</td>`).join("");
+
+        document.getElementById("mensaje").textContent = "";
 
       } catch (error) {
-        console.error("Error al obtener datos:", error);
         document.getElementById("mensaje").textContent =
-          "Error al cargar datos del servidor.";
+          "⚠️ Error al obtener datos.";
+        console.error("Error:", error);
       }
     }
 
@@ -74,9 +86,8 @@
       setTimeout(() => location.reload(), 3000);
     }
 
-    // Primera carga + actualización periódica
-    cargarDatos();
-    setInterval(cargarDatos, 5000);  // 🔄 Cada 5 segundos
+    cargarUltimoDato();
+    setInterval(cargarUltimoDato, 5000);
   </script>
 </body>
 </html>
