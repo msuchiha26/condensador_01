@@ -18,15 +18,15 @@ def get_mysql_connection():
 def index():
     return render_template("index.html")
 
-@app.route("/api/ultimo")
-def api_ultimo():
+@app.route("/api/data")
+def api_data():
     conn = get_mysql_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM lecturas2 ORDER BY timestamp DESC LIMIT 1")
-    row = cursor.fetchone()
+    cursor.execute("SELECT * FROM lecturas2 ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    return jsonify(row)
+    return jsonify(rows)
 
 @app.route("/descargar_csv")
 def descargar_csv():
