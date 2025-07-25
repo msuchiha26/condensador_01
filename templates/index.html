@@ -2,28 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Última Lectura</title>
+  <title>Lecturas con DataTables</title>
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
       background-color: #f8f8f8;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background-color: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: #eee;
-    }
     .btn {
-      margin-top: 20px;
+      margin-bottom: 15px;
       padding: 10px 15px;
       background-color: #007BFF;
       color: white;
@@ -38,56 +29,76 @@
   </style>
 </head>
 <body>
-  <h1>📈 Última Lectura Registrada</h1>
+  <h1>📈 Lecturas con DataTables</h1>
   <button class="btn" onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
-  <table id="tabla">
+
+  <table id="tabla" class="display" style="width:100%">
     <thead>
       <tr id="headers"></tr>
     </thead>
-    <tbody>
-      <tr id="fila"></tr>
-    </tbody>
+    <tbody id="datos"></tbody>
   </table>
+
   <p id="mensaje" style="margin-top: 20px; color: gray;"></p>
 
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
   <script>
-    async function cargarUltimoDato() {
+    let tablaDataTable;
+
+    async function cargarDatos() {
       try {
-        const res = await fetch("/api/ultimo");
+        const res = await fetch("/api/data");
         const data = await res.json();
 
-        if (!data || Object.keys(data).length === 0) {
-          document.getElementById("mensaje").textContent = "⏳ Aún no hay datos.";
+        if (!data || data.length === 0) {
+          document.getElementById("mensaje").textContent = "⏳ No hay datos para mostrar.";
+          if (tablaDataTable) {
+            tablaDataTable.clear().draw();
+          }
           return;
         }
 
-        const headers = Object.keys(data);
-        const values = Object.values(data);
-
-        if (document.getElementById("headers").children.length === 0) {
-          document.getElementById("headers").innerHTML =
-            headers.map(h => `<th>${h}</th>`).join("");
-        }
-
-        document.getElementById("fila").innerHTML =
-          values.map(v => `<td>${v}</td>`).join("");
-
         document.getElementById("mensaje").textContent = "";
 
+        // Crear encabezados dinámicos solo la primera vez
+        if (!tablaDataTable) {
+          const headers = Object.keys(data[0]);
+          document.getElementById("headers").innerHTML = headers.map(h => `<th>${h}</th>`).join("");
+
+          // Inicializar DataTables con los datos
+          tablaDataTable = $('#tabla').DataTable({
+            data: data,
+            columns: headers.map(h => ({ data: h })),
+            pageLength: 10,
+            lengthMenu: [5, 10, 25, 50],
+            order: [[0, "desc"]] // Ordenar por la primera columna (timestamp) descendente
+          });
+        } else {
+          // Actualizar datos existentes
+          tablaDataTable.clear();
+          tablaDataTable.rows.add(data);
+          tablaDataTable.draw();
+        }
+
       } catch (error) {
-        document.getElementById("mensaje").textContent =
-          "⚠️ Error al obtener datos.";
-        console.error("Error:", error);
+        document.getElementById("mensaje").textContent = "⚠️ Error al cargar datos.";
+        console.error(error);
       }
     }
 
     function descargarCSV() {
       window.location.href = "/descargar_csv";
-      setTimeout(() => location.reload(), 3000);
+      setTimeout(() => cargarDatos(), 3000);
     }
 
-    cargarUltimoDato();
-    setInterval(cargarUltimoDato, 5000);
+    $(document).ready(function () {
+      cargarDatos();
+      setInterval(cargarDatos, 5000); // Actualiza cada 5 segundos
+    });
   </script>
 </body>
 </html>
