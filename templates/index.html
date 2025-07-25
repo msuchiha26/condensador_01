@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Lecturas con DataTables</title>
+  <title>Lecturas con DataTables y orden personalizado</title>
 
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
@@ -29,7 +29,7 @@
   </style>
 </head>
 <body>
-  <h1>📈 Lecturas con DataTables</h1>
+  <h1>📈 Lecturas con DataTables y orden personalizado</h1>
   <button class="btn" onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
 
   <table id="tabla" class="display" style="width:100%">
@@ -64,21 +64,34 @@
 
         document.getElementById("mensaje").textContent = "";
 
-        // Crear encabezados dinámicos solo la primera vez
-        if (!tablaDataTable) {
-          const headers = Object.keys(data[0]);
-          document.getElementById("headers").innerHTML = headers.map(h => `<th>${h}</th>`).join("");
+        // Define el orden personalizado para las columnas:
+        const columnasOrdenadas = [
+          "id",
+          "timestamp",
+          "temp_ext",
+          "hum_ext",
+          "temp_int",
+          "hum_int",
+          "temp_1",
+          "temp_2",
+          "temp_med",
+          "pto_rocio",
+          "error_dif",
+          "pwm"
+        ];
 
-          // Inicializar DataTables con los datos
+        if (!tablaDataTable) {
+          // Crear encabezados con el orden definido
+          document.getElementById("headers").innerHTML = columnasOrdenadas.map(h => `<th>${h}</th>`).join("");
+
           tablaDataTable = $('#tabla').DataTable({
             data: data,
-            columns: headers.map(h => ({ data: h })),
+            columns: columnasOrdenadas.map(c => ({ data: c })),
             pageLength: 10,
             lengthMenu: [5, 10, 25, 50],
-            order: [[0, "desc"]] // Ordenar por la primera columna (timestamp) descendente
+            order: [[0, "desc"]] // Ordenar por id descendente
           });
         } else {
-          // Actualizar datos existentes
           tablaDataTable.clear();
           tablaDataTable.rows.add(data);
           tablaDataTable.draw();
@@ -97,7 +110,7 @@
 
     $(document).ready(function () {
       cargarDatos();
-      setInterval(cargarDatos, 5000); // Actualiza cada 5 segundos
+      setInterval(cargarDatos, 5000);
     });
   </script>
 </body>
