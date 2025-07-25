@@ -6,7 +6,6 @@ import os
 
 app = Flask(__name__)
 
-# 📦 Conexión a MySQL
 def get_mysql_connection():
     return mysql.connector.connect(
         host='base-condensador.cjagmwui8z8e.us-east-2.rds.amazonaws.com',
@@ -19,15 +18,15 @@ def get_mysql_connection():
 def index():
     return render_template("index.html")
 
-@app.route("/api/data")
-def api_data():
+@app.route("/api/ultimo")
+def api_ultimo():
     conn = get_mysql_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM lecturas2 ORDER BY timestamp DESC")
-    rows = cursor.fetchall()
+    cursor.execute("SELECT * FROM lecturas2 ORDER BY timestamp DESC LIMIT 1")
+    row = cursor.fetchone()
     cursor.close()
     conn.close()
-    return jsonify(rows)
+    return jsonify(row)
 
 @app.route("/descargar_csv")
 def descargar_csv():
@@ -37,14 +36,12 @@ def descargar_csv():
     rows = cursor.fetchall()
     column_names = [i[0] for i in cursor.description]
 
-    # 📁 Generar CSV en memoria
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(column_names)
     writer.writerows(rows)
     output.seek(0)
 
-    # 🧹 Borrar datos después de exportar
     cursor.execute("DELETE FROM lecturas2")
     conn.commit()
 
@@ -59,6 +56,5 @@ def descargar_csv():
     )
 
 if __name__ == "__main__":
-    # 🔧 Usar el puerto asignado por Render o 10000 por defecto
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
