@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_file
+from flask import Flask, render_template, jsonify, send_file, make_response, request
 import mysql.connector
 import csv
 import io
@@ -7,12 +7,16 @@ import os
 app = Flask(__name__)
 
 def get_mysql_connection():
-    return mysql.connector.connect(
-        host=os.getenv('MYSQL_HOST'),
-        user=os.getenv('MYSQL_USER'),
-        password=os.getenv('MYSQL_PASSWORD'),
-        database=os.getenv('MYSQL_DATABASE')
-    )
+    try:
+        return mysql.connector.connect(
+            host=os.getenv('MYSQL_HOST'),
+            user=os.getenv('MYSQL_USER'),
+            password=os.getenv('MYSQL_PASSWORD'),
+            database=os.getenv('MYSQL_DATABASE')
+        )
+    except mysql.connector.Error as err:
+        print(f"❌ Error de conexión a MySQL: {err}")
+        return None
 
 @app.route("/")
 def index():
@@ -21,18 +25,28 @@ def index():
 @app.route("/api/data")
 def api_data():
     conn = get_mysql_connection()
+    if conn is None:
+        return jsonify([]), 500
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM lecturas2 ORDER BY timestamp DESC")
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    return jsonify(rows)
+    response = make_response(jsonify(rows))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 @app.route("/descargar_csv")
 def descargar_csv():
+    key = request.args.get("key")
+    if key != os.getenv("CSV_SECRET_KEY"):
+        return "❌ Acceso no autorizado", 403
+
     conn = get_mysql_connection()
+    if conn is None:
+        return "Error al conectar con la base de datos", 500
+
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM lecturas2")
     rows = cursor.fetchall()
     column_names = [i[0] for i in cursor.description]
