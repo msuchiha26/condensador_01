@@ -8,10 +8,10 @@ app = Flask(__name__)
 
 def get_mysql_connection():
     return mysql.connector.connect(
-        host='base-condensador.cjagmwui8z8e.us-east-2.rds.amazonaws.com',
-        user='msuchiha',
-        password='90_Naruto_26',
-        database='datos-sensores'
+        host=os.getenv('MYSQL_HOST'),
+        user=os.getenv('MYSQL_USER'),
+        password=os.getenv('MYSQL_PASSWORD'),
+        database=os.getenv('MYSQL_DATABASE')
     )
 
 @app.route("/")
@@ -33,28 +33,23 @@ def descargar_csv():
     conn = get_mysql_connection()
     cursor = conn.cursor()
     
-    # Obtener todos los datos para exportar
     cursor.execute("SELECT * FROM lecturas2")
     rows = cursor.fetchall()
     column_names = [i[0] for i in cursor.description]
 
-    # Crear CSV en memoria
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(column_names)
     writer.writerows(rows)
     output.seek(0)
 
-    # Borrar todos los registros
     cursor.execute("DELETE FROM lecturas2")
-    # Reiniciar AUTO_INCREMENT a 1
     cursor.execute("ALTER TABLE lecturas2 AUTO_INCREMENT = 1")
-
     conn.commit()
+
     cursor.close()
     conn.close()
 
-    # Enviar archivo CSV al cliente
     return send_file(
         io.BytesIO(output.getvalue().encode()),
         mimetype='text/csv',
