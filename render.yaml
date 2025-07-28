@@ -2,5 +2,17 @@ services:
   - type: web
     name: condensador_01
     env: python
-    buildCommand: ""
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
+    envVars:
+      - key: MYSQL_HOST
+        value: ""
+      - key: MYSQL_USER
+        value: ""
+      - key: MYSQL_PASSWORD
+        value: ""
+      - key: MYSQL_DATABASE
+        value: ""
+      - key: PORT
+        value: "10000"
+
