@@ -14,8 +14,11 @@
       padding: 20px;
       background-color: #f8f8f8;
     }
+    h1 {
+      margin-bottom: 20px;
+    }
     .btn {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       padding: 10px 15px;
       background-color: #007BFF;
       color: white;
@@ -27,6 +30,11 @@
     .btn:hover {
       background-color: #0056b3;
     }
+    #mensaje {
+      margin-top: 15px;
+      color: #666;
+      font-size: 15px;
+    }
     table.dataTable {
       width: 100% !important;
     }
@@ -36,21 +44,21 @@
   <h1>📈 Datos obtenidos</h1>
   <button class="btn" onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
 
-  <table id="tabla" class="display" style="width:100%">
+  <table id="tabla" class="display">
     <thead>
       <tr id="headers"></tr>
     </thead>
     <tbody id="datos"></tbody>
   </table>
 
-  <p id="mensaje" style="margin-top: 20px; color: gray;"></p>
+  <p id="mensaje">⏳ Cargando datos...</p>
 
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-  <!-- Idioma español -->
-  <script src="https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"></script>
+  <!-- DataTables Spanish language -->
+  <script src="https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.js"></script>
 
   <script>
     let tablaDataTable;
@@ -76,21 +84,21 @@
         ];
 
         if (!tablaDataTable) {
-          document.getElementById("headers").innerHTML = columnasOrdenadas.map(h => `<th>${h}</th>`).join("");
+          document.getElementById("headers").innerHTML =
+            columnasOrdenadas.map(h => `<th>${h}</th>`).join("");
 
           tablaDataTable = $('#tabla').DataTable({
             data: data,
             columns: columnasOrdenadas.map(c => {
-              if (c === "timestamp") {
-                return {
-                  data: c,
-                  render: function (data) {
-                    const fecha = new Date(data);
-                    return fecha.toLocaleString();
+              return c === "timestamp"
+                ? {
+                    data: c,
+                    render: function (data) {
+                      const fecha = new Date(data);
+                      return fecha.toLocaleString();
+                    }
                   }
-                };
-              }
-              return { data: c };
+                : { data: c };
             }),
             pageLength: 10,
             lengthMenu: [5, 10, 25, 50],
@@ -118,8 +126,9 @@
         return;
       }
 
+      const claveURL = new URLSearchParams({ key: clave.trim() }).toString();
       document.getElementById("mensaje").textContent = "⬇️ Descargando CSV y vaciando datos...";
-      window.location.href = `/descargar_csv?key=${clave}`;
+      window.location.href = `/descargar_csv?${claveURL}`;
       setTimeout(() => {
         cargarDatos();
         document.getElementById("mensaje").textContent = "";
