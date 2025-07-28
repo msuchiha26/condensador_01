@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Condensador de agua en funcionamiento</title>
 
   <!-- DataTables CSS -->
@@ -26,6 +27,9 @@
     .btn:hover {
       background-color: #0056b3;
     }
+    table.dataTable {
+      width: 100% !important;
+    }
   </style>
 </head>
 <body>
@@ -45,6 +49,8 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <!-- Idioma español -->
+  <script src="https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"></script>
 
   <script>
     let tablaDataTable;
@@ -65,18 +71,8 @@
         document.getElementById("mensaje").textContent = "";
 
         const columnasOrdenadas = [
-          "id",
-          "timestamp",
-          "temp_ext",
-          "hum_ext",
-          "temp_int",
-          "hum_int",
-          "temp_1",
-          "temp_2",
-          "temp_med",
-          "pto_rocio",
-          "error_dif",
-          "pwm"
+          "id", "timestamp", "temp_ext", "hum_ext", "temp_int", "hum_int",
+          "temp_1", "temp_2", "temp_med", "pto_rocio", "error_dif", "pwm"
         ];
 
         if (!tablaDataTable) {
@@ -84,10 +80,24 @@
 
           tablaDataTable = $('#tabla').DataTable({
             data: data,
-            columns: columnasOrdenadas.map(c => ({ data: c })),
+            columns: columnasOrdenadas.map(c => {
+              if (c === "timestamp") {
+                return {
+                  data: c,
+                  render: function (data) {
+                    const fecha = new Date(data);
+                    return fecha.toLocaleString();
+                  }
+                };
+              }
+              return { data: c };
+            }),
             pageLength: 10,
             lengthMenu: [5, 10, 25, 50],
-            order: [[0, "desc"]]
+            order: [[0, "desc"]],
+            language: {
+              url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+            }
           });
         } else {
           tablaDataTable.clear();
@@ -102,8 +112,18 @@
     }
 
     function descargarCSV() {
-      window.location.href = "/descargar_csv";
-      setTimeout(() => cargarDatos(), 3000);
+      const clave = prompt("🔐 Ingresa la clave para descargar el CSV:");
+      if (!clave) {
+        alert("⚠️ Clave requerida para descargar.");
+        return;
+      }
+
+      document.getElementById("mensaje").textContent = "⬇️ Descargando CSV y vaciando datos...";
+      window.location.href = `/descargar_csv?key=${clave}`;
+      setTimeout(() => {
+        cargarDatos();
+        document.getElementById("mensaje").textContent = "";
+      }, 3000);
     }
 
     $(document).ready(function () {
