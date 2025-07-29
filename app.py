@@ -14,7 +14,7 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas")
 
 # Contraseña para descargar CSV
-CSV_DOWNLOAD_PASSWORD = os.getenv("CSV_DOWNLOAD_PASSWORD", "1234")  # puedes cambiarla desde Render
+CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")  # puedes cambiarla desde Render
 
 def get_mysql_connection():
     return mysql.connector.connect(
