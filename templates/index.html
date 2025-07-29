@@ -5,6 +5,59 @@
   <title>Dashboard de Sensores</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
+    async function downloadCSV(event) {
+      event.preventDefault();
+
+      const passwordInput = document.getElementById("password");
+      const messageDiv = document.getElementById("message");
+      messageDiv.textContent = "";
+
+      const password = passwordInput.value.trim();
+      if (!password) {
+        messageDiv.textContent = "Por favor, ingresa la contraseña.";
+        messageDiv.style.color = "red";
+        return;
+      }
+
+      try {
+        const response = await fetch("/download_csv", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ password }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            messageDiv.textContent = "Contraseña incorrecta.";
+            messageDiv.style.color = "red";
+          } else {
+            messageDiv.textContent = "Error al descargar el archivo.";
+            messageDiv.style.color = "red";
+          }
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "datos.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        messageDiv.textContent = "Archivo descargado correctamente.";
+        messageDiv.style.color = "green";
+        passwordInput.value = "";
+
+      } catch (error) {
+        messageDiv.textContent = "Error de conexión.";
+        messageDiv.style.color = "red";
+      }
+    }
+
     async function fetchData() {
       const response = await fetch("/api/data");
       const { columns, data } = await response.json();
@@ -42,15 +95,6 @@
 
     setInterval(fetchData, 20000);
     window.onload = fetchData;
-
-    function confirmDownload() {
-      const password = document.getElementById("password").value;
-      if (!password) {
-        alert("Por favor, ingresa la contraseña.");
-        return false;
-      }
-      return true;
-    }
   </script>
   <style>
     body {
@@ -75,12 +119,15 @@
     }
     form {
       margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     input[type="password"] {
       padding: 8px;
-      margin-right: 10px;
       border-radius: 5px;
       border: 1px solid #ccc;
+      flex-grow: 1;
     }
     button {
       padding: 8px 15px;
@@ -93,15 +140,20 @@
     button:hover {
       background-color: #0056b3;
     }
+    #message {
+      margin-top: 0.5rem;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <h1>Últimos 10 Registros</h1>
 
-  <form method="POST" action="/download_csv" onsubmit="return confirmDownload()">
-    <input type="password" id="password" name="password" placeholder="Contraseña" required />
+  <form id="csvForm" onsubmit="downloadCSV(event)">
+    <input type="password" id="password" name="password" placeholder="Contraseña para descargar CSV" required />
     <button type="submit">Descargar CSV</button>
   </form>
+  <div id="message"></div>
 
   <table id="data-table">
     <thead></thead>
@@ -109,5 +161,3 @@
   </table>
 </body>
 </html>
-
-
