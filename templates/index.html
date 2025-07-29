@@ -12,8 +12,8 @@
 
     function fetchData() {
       fetch("/api/data")
-        .then((response) => response.json())
-        .then((data) => {
+        .then(res => res.json())
+        .then(({columns, data}) => {
           const table = document.getElementById("data-table");
           table.innerHTML = "";
 
@@ -22,12 +22,11 @@
             return;
           }
 
-          const headers = Object.keys(data[0]);
           const thead = document.createElement("thead");
           const headerRow = document.createElement("tr");
-          headers.forEach((key) => {
+          columns.forEach(colName => {
             const th = document.createElement("th");
-            th.textContent = key;
+            th.textContent = colName;
             th.className = "px-4 py-2 border-b text-left text-sm font-medium text-gray-300";
             headerRow.appendChild(th);
           });
@@ -35,11 +34,11 @@
           table.appendChild(thead);
 
           const tbody = document.createElement("tbody");
-          data.forEach((row) => {
+          data.forEach(row => {
             const tr = document.createElement("tr");
-            headers.forEach((key) => {
+            columns.forEach(colName => {
               const td = document.createElement("td");
-              td.textContent = row[key];
+              td.textContent = row[colName];
               td.className = "px-4 py-2 border-b text-sm text-gray-200";
               tr.appendChild(td);
             });
@@ -47,13 +46,17 @@
           });
           table.appendChild(tbody);
         })
-        .catch((error) => {
-          console.error("Error al cargar datos:", error);
-        });
+        .catch(err => console.error("Error al cargar datos:", err));
     }
 
     function showModal() {
-      document.getElementById("modal").classList.remove("hidden");
+      const modal = document.getElementById("modal");
+      modal.classList.remove("hidden");
+      const input = document.getElementById("password");
+      input.value = "";
+      input.focus();
+      const errorDiv = document.getElementById("download-error");
+      errorDiv.classList.add("hidden");
     }
 
     function hideModal() {
@@ -61,35 +64,32 @@
     }
 
     function downloadCSV() {
+      const errorDiv = document.getElementById("download-error");
+      errorDiv.classList.add("hidden");
       const password = document.getElementById("password").value;
       fetch("/download", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `password=${encodeURIComponent(password)}`
       })
-        .then(response => {
-          if (response.status === 403) {
-            alert("Contraseña incorrecta");
-            return;
-          }
-          return response.blob();
-        })
-        .then(blob => {
-          if (blob) {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "datos.csv";
-            a.click();
-            hideModal();
-            fetchData(); // Actualizar la tabla
-          }
-        })
-        .catch(err => {
-          console.error("Error al descargar:", err);
-        });
+      .then(response => {
+        if (response.status === 403) {
+          errorDiv.textContent = "Contraseña incorrecta";
+          errorDiv.classList.remove("hidden");
+          throw new Error("Contraseña incorrecta");
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "datos.csv";
+        a.click();
+        hideModal();
+        fetchData();
+      })
+      .catch(err => console.error("Error al descargar:", err));
     }
 
     setInterval(fetchData, 20000);
@@ -120,8 +120,10 @@
         type="password"
         id="password"
         placeholder="Contraseña"
-        class="w-full px-4 py-2 rounded bg-gray-900 text-white border border-gray-600 mb-4"
+        class="w-full px-4 py-2 rounded bg-gray-900 text-white border border-gray-600 mb-2"
+        onkeydown="if(event.key === 'Enter'){downloadCSV()}"
       />
+      <div id="download-error" class="text-red-500 mb-4 hidden"></div>
       <div class="flex justify-end space-x-2">
         <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
           Descargar
@@ -135,4 +137,3 @@
 
 </body>
 </html>
-
