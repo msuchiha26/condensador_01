@@ -6,12 +6,13 @@ import os
 
 app = Flask(__name__)
 
-# Variables de entorno (configúralas en Render)
+# Variables de entorno
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
+CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")  # Contraseña por defecto
 
 def get_mysql_connection():
     return mysql.connector.connect(
@@ -30,11 +31,9 @@ def get_data():
     conn = get_mysql_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Últimos 10 registros
+    # Solo los últimos 10 registros
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()
-
-    # Obtener columnas en orden exacto
     column_order = [col[0] for col in cursor.description]
 
     cursor.close()
@@ -44,8 +43,13 @@ def get_data():
 
     return jsonify({"columns": column_order, "data": rows})
 
-@app.route("/download_csv", methods=["GET"])
+@app.route("/download_csv", methods=["POST"])
 def download_csv():
+    password = request.form.get("password")
+
+    if password != CSV_PASSWORD:
+        return "Contraseña incorrecta", 401
+
     conn = get_mysql_connection()
     cursor = conn.cursor()
 
@@ -58,7 +62,7 @@ def download_csv():
     writer.writerow(headers)
     writer.writerows(rows)
 
-    # Opcional: limpiar tabla después de exportar
+    # Opcional: borrar los datos después
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
     conn.commit()
 
@@ -73,5 +77,4 @@ def download_csv():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
 
