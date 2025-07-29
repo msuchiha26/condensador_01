@@ -6,87 +6,66 @@ import os
 
 app = Flask(__name__)
 
-def get_mysql_connection():
-    try:
-        return mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DATABASE')
-        )
-    except mysql.connector.Error as err:
-        print(f"❌ Error de conexión a MySQL: {err}")
-        return None
+# Usa variables de entorno para mayor seguridad
+MYSQL_HOST = os.getenv("MYSQL_HOST")
+MYSQL_USER = os.getenv("MYSQL_USER")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
+MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
 
-DB_TABLE = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
+def get_mysql_connection():
+    return mysql.connector.connect(
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DATABASE
+    )
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
 @app.route("/api/data")
-def api_data():
+def get_data():
     conn = get_mysql_connection()
-    if conn is None:
-        return jsonify({"columns": [], "data": []}), 500
     cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(f"SHOW COLUMNS FROM {DB_TABLE}")
-        columnas = [col["Field"] for col in cursor.fetchall()]
 
-        cursor.execute(f"SELECT * FROM {DB_TABLE} ORDER BY timestamp DESC")
-        filas = cursor.fetchall()
-    except mysql.connector.Error as e:
-        print(f"Error al obtener datos: {e}")
-        columnas = []
-        filas = []
-    finally:
-        cursor.close()
-        conn.close()
+    # Solo los últimos 10 registros
+    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
+    rows = cursor.fetchall()
 
-    return jsonify({"columns": columnas, "data": filas})
+    cursor.close()
+    conn.close()
 
-@app.route("/descargar_csv", methods=["GET"])
-def descargar_csv():
-    key = request.args.get("key")
-    if key != os.getenv("CSV_SECRET_KEY"):
-        return "❌ Acceso no autorizado", 403
+    # Revertimos para que el más reciente quede al final
+    rows.reverse()
 
+    return jsonify(rows)
+
+@app.route("/download_csv", methods=["GET"])
+def download_csv():
     conn = get_mysql_connection()
-    if conn is None:
-        return "Error al conectar con la base de datos", 500
-
     cursor = conn.cursor()
-    try:
-        cursor.execute(f"SELECT * FROM {DB_TABLE}")
-        rows = cursor.fetchall()
-        if not rows:
-            return "No hay datos para exportar", 404
-        column_names = [desc[0] for desc in cursor.description]
 
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(column_names)
-        writer.writerows(rows)
-        output.seek(0)
+    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME}")
+    rows = cursor.fetchall()
+    headers = [i[0] for i in cursor.description]
 
-        cursor.execute(f"DELETE FROM {DB_TABLE}")
-        cursor.execute(f"ALTER TABLE {DB_TABLE} AUTO_INCREMENT = 1")
-        conn.commit()
-    except mysql.connector.Error as e:
-        print(f"Error durante exportación o borrado: {e}")
-        return "Error en la exportación de datos", 500
-    finally:
-        cursor.close()
-        conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    writer.writerows(rows)
 
-    response = send_file(
-        io.BytesIO(output.getvalue().encode()),
-        mimetype='text/csv',
-        as_attachment=True,
-        download_name='lecturas.csv'
-    )
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    # Opcional: vaciar la tabla después de exportar
+    cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=datos.csv"
+    response.headers["Content-type"] = "text/csv"
     return response
 
 if __name__ == "__main__":
