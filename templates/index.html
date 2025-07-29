@@ -78,28 +78,32 @@
 
         document.getElementById("mensaje").textContent = "";
 
-        const columnasOrdenadas = [
-          "id", "timestamp", "temp_ext", "hum_ext", "temp_int", "hum_int",
-          "temp_1", "temp_2", "temp_med", "pto_rocio", "error_dif", "pwm"
-        ];
+        // Columnas dinámicas según keys del primer objeto
+        const columnasDinamicas = Object.keys(data[0]);
+
+        // Construir encabezados dinámicos
+        document.getElementById("headers").innerHTML =
+          columnasDinamicas.map(c => `<th>${c}</th>`).join("");
+
+        // Configuración de columnas para DataTables
+        const columnsConfig = columnasDinamicas.map(c => {
+          if (c === "timestamp") {
+            return {
+              data: c,
+              render: function (data) {
+                const fecha = new Date(data);
+                return fecha.toLocaleString();
+              }
+            };
+          } else {
+            return { data: c };
+          }
+        });
 
         if (!tablaDataTable) {
-          document.getElementById("headers").innerHTML =
-            columnasOrdenadas.map(h => `<th>${h}</th>`).join("");
-
           tablaDataTable = $('#tabla').DataTable({
             data: data,
-            columns: columnasOrdenadas.map(c => {
-              return c === "timestamp"
-                ? {
-                    data: c,
-                    render: function (data) {
-                      const fecha = new Date(data);
-                      return fecha.toLocaleString();
-                    }
-                  }
-                : { data: c };
-            }),
+            columns: columnsConfig,
             pageLength: 10,
             lengthMenu: [5, 10, 25, 50],
             order: [[0, "desc"]],
@@ -132,7 +136,7 @@
       setTimeout(() => {
         cargarDatos();
         document.getElementById("mensaje").textContent = "";
-      }, 3000);
+      }, 5000);
     }
 
     $(document).ready(function () {
@@ -142,3 +146,4 @@
   </script>
 </body>
 </html>
+
