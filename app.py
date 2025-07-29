@@ -6,15 +6,13 @@ import os
 
 app = Flask(__name__)
 
-# Cargar variables de entorno para credenciales
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
 
-# Contraseña para descargar CSV
-CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")  # puedes cambiarla desde Render
+CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")
 
 def get_mysql_connection():
     return mysql.connector.connect(
@@ -33,16 +31,19 @@ def get_data():
     connection = get_mysql_connection()
     cursor = connection.cursor()
 
-    # Obtener los últimos 10 registros
-    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
+    cursor.execute(
+        f"""
+        SELECT * FROM (
+            SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10
+        ) sub
+        ORDER BY id ASC
+        """
+    )
     columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
 
     cursor.close()
     connection.close()
-
-    # Revertir para mostrar del más antiguo al más reciente
-    rows.reverse()
 
     return jsonify([dict(zip(columns, row)) for row in rows])
 
@@ -65,7 +66,6 @@ def download_data():
     writer.writerows(rows)
     output.seek(0)
 
-    # Borrar datos y reiniciar ID
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
     cursor.execute(f"ALTER TABLE {MYSQL_TABLE_NAME} AUTO_INCREMENT = 1")
 
@@ -82,3 +82,4 @@ def download_data():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
