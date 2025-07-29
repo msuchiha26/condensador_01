@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, make_response, request
+from flask import Flask, render_template, request, jsonify, Response
 import mysql.connector
 import csv
 import io
@@ -6,13 +6,15 @@ import os
 
 app = Flask(__name__)
 
-# Variables de entorno
+# Cargar variables de entorno para credenciales
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
-MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
-CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")  # Contraseña por defecto
+MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas")
+
+# Contraseña para descargar CSV
+CSV_DOWNLOAD_PASSWORD = os.getenv("CSV_DOWNLOAD_PASSWORD", "1234")  # puedes cambiarla desde Render
 
 def get_mysql_connection():
     return mysql.connector.connect(
@@ -28,54 +30,50 @@ def index():
 
 @app.route("/api/data")
 def get_data():
-    conn = get_mysql_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Solo los últimos 10 registros ordenados por id descendente
-    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
+    connection = get_mysql_connection()
+    cursor = connection.cursor()
+    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME}")
+    columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
-    column_order = [col[0] for col in cursor.description]
-
     cursor.close()
-    conn.close()
+    connection.close()
+    return jsonify([dict(zip(columns, row)) for row in rows])
 
-    rows.reverse()  # Mostrar de más antiguo a más reciente
+@app.route("/download", methods=["POST"])
+def download_data():
+    password = request.form.get("password", "")
+    if password != CSV_DOWNLOAD_PASSWORD:
+        return "Contraseña incorrecta", 403
 
-    return jsonify({"columns": column_order, "data": rows})
+    connection = get_mysql_connection()
+    cursor = connection.cursor()
 
-@app.route("/download_csv", methods=["POST"])
-def download_csv():
-    password = request.form.get("password")
-
-    if password != CSV_PASSWORD:
-        return "Contraseña incorrecta", 401
-
-    conn = get_mysql_connection()
-    cursor = conn.cursor()
-
+    # Exportar datos a CSV
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME}")
     rows = cursor.fetchall()
-    headers = [i[0] for i in cursor.description]
+    columns = [desc[0] for desc in cursor.description]
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(headers)
+    writer.writerow(columns)
     writer.writerows(rows)
+    output.seek(0)
 
-    # Opcional: borrar datos tras exportar
+    # Borrar registros
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
-    conn.commit()
+    # Reiniciar ID
+    cursor.execute(f"ALTER TABLE {MYSQL_TABLE_NAME} AUTO_INCREMENT = 1")
 
+    connection.commit()
     cursor.close()
-    conn.close()
+    connection.close()
 
-    response = make_response(output.getvalue())
-    response.headers["Content-Disposition"] = "attachment; filename=datos.csv"
-    response.headers["Content-type"] = "text/csv"
-    return response
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=datos.csv"}
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
-
