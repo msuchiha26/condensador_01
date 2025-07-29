@@ -42,7 +42,7 @@ def get_data():
 @app.route("/download", methods=["POST"])
 def download_data():
     password = request.form.get("password", "")
-    if password != CSV_DOWNLOAD_PASSWORD:
+    if password != CSV_PASSWORD:
         return "Contraseña incorrecta", 403
 
     connection = get_mysql_connection()
