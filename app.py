@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_file, make_response, request
+from flask import Flask, render_template, jsonify, make_response, request
 import mysql.connector
 import csv
 import io
@@ -31,7 +31,7 @@ def get_data():
     conn = get_mysql_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Solo los últimos 10 registros
+    # Solo los últimos 10 registros ordenados por id descendente
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()
     column_order = [col[0] for col in cursor.description]
@@ -62,7 +62,7 @@ def download_csv():
     writer.writerow(headers)
     writer.writerows(rows)
 
-    # Opcional: borrar los datos después
+    # Opcional: borrar datos tras exportar
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
     conn.commit()
 
@@ -77,4 +77,5 @@ def download_csv():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
