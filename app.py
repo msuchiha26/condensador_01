@@ -11,7 +11,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
-MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas")
+MYSQL_TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "lecturas2")
 
 # Contraseña para descargar CSV
 CSV_PASSWORD = os.getenv("CSV_PASSWORD", "1234")  # puedes cambiarla desde Render
