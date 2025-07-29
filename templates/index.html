@@ -1,265 +1,137 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard de Sensores</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor de Sensores</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    async function openModal() {
-      document.getElementById("modal").style.display = "block";
-      document.getElementById("password").value = "";
-      document.getElementById("modalMessage").textContent = "";
-      document.getElementById("password").focus();
-    }
+    tailwind.config = {
+      darkMode: 'class',
+    };
 
-    function closeModal() {
-      document.getElementById("modal").style.display = "none";
-    }
+    function fetchData() {
+      fetch("/api/data")
+        .then((response) => response.json())
+        .then((data) => {
+          const table = document.getElementById("data-table");
+          table.innerHTML = "";
 
-    async function submitPassword(event) {
-      event.preventDefault();
-
-      const passwordInput = document.getElementById("password");
-      const modalMessage = document.getElementById("modalMessage");
-      modalMessage.textContent = "";
-
-      const password = passwordInput.value.trim();
-      if (!password) {
-        modalMessage.textContent = "Por favor, ingresa la contraseña.";
-        modalMessage.style.color = "red";
-        return;
-      }
-
-      try {
-        const response = await fetch("/download", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ password }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            modalMessage.textContent = "Contraseña incorrecta.";
-            modalMessage.style.color = "red";
-          } else {
-            modalMessage.textContent = "Error al descargar el archivo.";
-            modalMessage.style.color = "red";
+          if (data.length === 0) {
+            table.innerHTML = "<tr><td class='text-center py-4' colspan='100%'>No hay datos disponibles</td></tr>";
+            return;
           }
-          return;
-        }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+          const headers = Object.keys(data[0]);
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+          headers.forEach((key) => {
+            const th = document.createElement("th");
+            th.textContent = key;
+            th.className = "px-4 py-2 border-b text-left text-sm font-medium text-gray-300";
+            headerRow.appendChild(th);
+          });
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "datos.csv";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-
-        modalMessage.textContent = "Archivo descargado correctamente.";
-        modalMessage.style.color = "green";
-        passwordInput.value = "";
-
-        setTimeout(() => {
-          closeModal();
-        }, 1500);
-
-      } catch (error) {
-        modalMessage.textContent = "Error de conexión.";
-        modalMessage.style.color = "red";
-      }
+          const tbody = document.createElement("tbody");
+          data.forEach((row) => {
+            const tr = document.createElement("tr");
+            headers.forEach((key) => {
+              const td = document.createElement("td");
+              td.textContent = row[key];
+              td.className = "px-4 py-2 border-b text-sm text-gray-200";
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+        })
+        .catch((error) => {
+          console.error("Error al cargar datos:", error);
+        });
     }
 
-    async function fetchData() {
-      const response = await fetch("/api/data");
-      const data = await response.json();
-      const columns = data.length > 0 ? Object.keys(data[0]) : [];
+    function showModal() {
+      document.getElementById("modal").classList.remove("hidden");
+    }
 
-      const table = document.getElementById("data-table");
-      const thead = table.querySelector("thead");
-      const tbody = table.querySelector("tbody");
+    function hideModal() {
+      document.getElementById("modal").classList.add("hidden");
+    }
 
-      thead.innerHTML = "";
-      tbody.innerHTML = "";
-
-      if (data.length === 0) {
-        thead.innerHTML = "<tr><th>No hay datos</th></tr>";
-        return;
-      }
-
-      const headerRow = document.createElement("tr");
-      columns.forEach((col) => {
-        const th = document.createElement("th");
-        th.textContent = col;
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-
-      data.forEach((row) => {
-        const tr = document.createElement("tr");
-        columns.forEach((col) => {
-          const td = document.createElement("td");
-          td.textContent = row[col];
-          tr.appendChild(td);
+    function downloadCSV() {
+      const password = document.getElementById("password").value;
+      fetch("/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `password=${encodeURIComponent(password)}`
+      })
+        .then(response => {
+          if (response.status === 403) {
+            alert("Contraseña incorrecta");
+            return;
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          if (blob) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "datos.csv";
+            a.click();
+            hideModal();
+            fetchData(); // Actualizar la tabla
+          }
+        })
+        .catch(err => {
+          console.error("Error al descargar:", err);
         });
-        tbody.appendChild(tr);
-      });
     }
 
     setInterval(fetchData, 20000);
     window.onload = fetchData;
-
-    // Cerrar modal al hacer clic fuera del contenido
-    window.onclick = function(event) {
-      const modal = document.getElementById("modal");
-      if (event.target == modal) {
-        closeModal();
-      }
-    };
-
-    // Modo oscuro toggle
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("toggleDarkMode").addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-      });
-    });
   </script>
-
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      background-color: white;
-      color: black;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    h1 {
-      margin-bottom: 1rem;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 1rem;
-      transition: border-color 0.3s;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-      transition: border-color 0.3s, background-color 0.3s;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    button {
-      padding: 8px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-bottom: 1rem;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    /* Modal Styles */
-    #modal {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.5);
-    }
-    #modalContent {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 300px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      text-align: center;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    #modalContent input[type="password"] {
-      width: 90%;
-      padding: 8px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
-    }
-    #modalContent button {
-      margin: 5px;
-      width: 100px;
-    }
-    #modalMessage {
-      margin-top: 10px;
-      font-weight: bold;
-      min-height: 20px;
-    }
-
-    /* Modo oscuro */
-    .dark-mode {
-      background-color: #121212;
-      color: #e0e0e0;
-    }
-    .dark-mode table, .dark-mode th, .dark-mode td {
-      border-color: #444;
-    }
-    .dark-mode th {
-      background-color: #222;
-    }
-    .dark-mode button {
-      background-color: #1a73e8;
-      color: white;
-    }
-    .dark-mode button:hover {
-      background-color: #135abf;
-    }
-    .dark-mode #modalContent {
-      background-color: #1f1f1f;
-      color: #e0e0e0;
-    }
-    .dark-mode #modalContent input[type="password"] {
-      background-color: #333;
-      color: #eee;
-      border: 1px solid #555;
-    }
-  </style>
 </head>
-<body>
-  <button id="toggleDarkMode">Modo Oscuro</button>
+<body class="bg-gray-900 text-white min-h-screen p-6">
 
-  <h1>Últimos 10 Registros</h1>
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-6">Lecturas del Sensor</h1>
 
-  <button onclick="openModal()">Descargar CSV</button>
+    <div class="flex justify-end mb-4">
+      <button onclick="showModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
+        Descargar CSV
+      </button>
+    </div>
 
-  <table id="data-table">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Modal -->
-  <div id="modal">
-    <div id="modalContent">
-      <form id="passwordForm" onsubmit="submitPassword(event)">
-        <label for="password">Ingresa la contraseña:</label><br />
-        <input type="password" id="password" name="password" autocomplete="off" required /><br />
-        <button type="submit">Enviar</button>
-        <button type="button" onclick="closeModal()">Cerrar</button>
-        <div id="modalMessage"></div>
-      </form>
+    <div class="overflow-x-auto rounded-lg shadow-lg border border-gray-700">
+      <table id="data-table" class="min-w-full bg-gray-800"></table>
     </div>
   </div>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-80">
+      <h2 class="text-lg font-semibold mb-4">Introduce la contraseña</h2>
+      <input
+        type="password"
+        id="password"
+        placeholder="Contraseña"
+        class="w-full px-4 py-2 rounded bg-gray-900 text-white border border-gray-600 mb-4"
+      />
+      <div class="flex justify-end space-x-2">
+        <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          Descargar
+        </button>
+        <button onclick="hideModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
