@@ -6,7 +6,7 @@ import os
 
 app = Flask(__name__)
 
-# Usa variables de entorno para mayor seguridad
+# Variables de entorno (configúralas en Render)
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
@@ -30,17 +30,19 @@ def get_data():
     conn = get_mysql_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Solo los últimos 10 registros
+    # Últimos 10 registros
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()
+
+    # Obtener columnas en orden exacto
+    column_order = [col[0] for col in cursor.description]
 
     cursor.close()
     conn.close()
 
-    # Revertimos para que el más reciente quede al final
-    rows.reverse()
+    rows.reverse()  # Mostrar de más antiguo a más reciente
 
-    return jsonify(rows)
+    return jsonify({"columns": column_order, "data": rows})
 
 @app.route("/download_csv", methods=["GET"])
 def download_csv():
@@ -56,7 +58,7 @@ def download_csv():
     writer.writerow(headers)
     writer.writerows(rows)
 
-    # Opcional: vaciar la tabla después de exportar
+    # Opcional: limpiar tabla después de exportar
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
     conn.commit()
 
