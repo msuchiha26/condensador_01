@@ -13,7 +13,6 @@
       const thead = table.querySelector("thead");
       const tbody = table.querySelector("tbody");
 
-      // Limpiar tabla
       thead.innerHTML = "";
       tbody.innerHTML = "";
 
@@ -22,7 +21,6 @@
         return;
       }
 
-      // Cabecera con orden exacto
       const headerRow = document.createElement("tr");
       columns.forEach((col) => {
         const th = document.createElement("th");
@@ -31,7 +29,6 @@
       });
       thead.appendChild(headerRow);
 
-      // Filas
       data.forEach((row) => {
         const tr = document.createElement("tr");
         columns.forEach((col) => {
@@ -43,17 +40,50 @@
       });
     }
 
-    // Actualizar cada 20 segundos
     setInterval(fetchData, 20000);
     window.onload = fetchData;
+
+    function confirmDownload() {
+      const password = document.getElementById("password").value;
+      if (!password) {
+        alert("Por favor, ingresa la contraseña.");
+        return false;
+      }
+      return true;
+    }
   </script>
   <style>
-    body { font-family: sans-serif; padding: 1rem; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background-color: #f2f2f2; }
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    form {
+      margin-bottom: 1rem;
+    }
+    input[type="password"] {
+      padding: 8px;
+      margin-right: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
     button {
-      padding: 10px 15px;
+      padding: 8px 15px;
       background-color: #007bff;
       color: white;
       border: none;
@@ -67,10 +97,17 @@
 </head>
 <body>
   <h1>Últimos 10 Registros</h1>
-  <button onclick="window.location.href='/download_csv'">Descargar CSV</button>
+
+  <form method="POST" action="/download_csv" onsubmit="return confirmDownload()">
+    <input type="password" id="password" name="password" placeholder="Contraseña" required />
+    <button type="submit">Descargar CSV</button>
+  </form>
+
   <table id="data-table">
     <thead></thead>
     <tbody></tbody>
   </table>
 </body>
 </html>
+
+
