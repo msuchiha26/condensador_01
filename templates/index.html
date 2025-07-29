@@ -66,7 +66,10 @@
     async function cargarDatos() {
       try {
         const res = await fetch("/api/data");
-        const data = await res.json();
+        const json = await res.json();
+
+        const columnasDinamicas = json.columns;
+        const data = json.data;
 
         if (!data || data.length === 0) {
           document.getElementById("mensaje").textContent = "⏳ No hay datos para mostrar.";
@@ -78,14 +81,11 @@
 
         document.getElementById("mensaje").textContent = "";
 
-        // Columnas dinámicas según keys del primer objeto
-        const columnasDinamicas = Object.keys(data[0]);
-
         // Construir encabezados dinámicos
         document.getElementById("headers").innerHTML =
           columnasDinamicas.map(c => `<th>${c}</th>`).join("");
 
-        // Configuración de columnas para DataTables
+        // Configurar columnas DataTables con render especial para timestamp
         const columnsConfig = columnasDinamicas.map(c => {
           if (c === "timestamp") {
             return {
@@ -146,4 +146,3 @@
   </script>
 </body>
 </html>
-
