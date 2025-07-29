@@ -32,19 +32,18 @@ def index():
 def get_data():
     connection = get_mysql_connection()
     cursor = connection.cursor()
-    
-    # Mostrar solo los 10 últimos registros ordenados por ID descendente
+
+    # Obtener los últimos 10 registros
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10")
-    
     columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
-    
+
     cursor.close()
     connection.close()
-    
-    # Revertir los datos para que se muestren en orden ascendente (opcional)
+
+    # Revertir para mostrar del más antiguo al más reciente
     rows.reverse()
-    
+
     return jsonify([dict(zip(columns, row)) for row in rows])
 
 @app.route("/download", methods=["POST"])
@@ -56,7 +55,6 @@ def download_data():
     connection = get_mysql_connection()
     cursor = connection.cursor()
 
-    # Exportar datos a CSV
     cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME}")
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
@@ -67,7 +65,7 @@ def download_data():
     writer.writerows(rows)
     output.seek(0)
 
-    # Borrar registros y reiniciar ID
+    # Borrar datos y reiniciar ID
     cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
     cursor.execute(f"ALTER TABLE {MYSQL_TABLE_NAME} AUTO_INCREMENT = 1")
 
