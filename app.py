@@ -30,22 +30,14 @@ def index():
 def get_data():
     connection = get_mysql_connection()
     cursor = connection.cursor()
-
-    cursor.execute(
-        f"""
-        SELECT * FROM (
-            SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id DESC LIMIT 10
-        ) sub
-        ORDER BY id ASC
-        """
-    )
+    cursor.execute(f"SELECT * FROM {MYSQL_TABLE_NAME} ORDER BY id ASC LIMIT 10")
     columns = [col[0] for col in cursor.description]
     rows = cursor.fetchall()
-
     cursor.close()
     connection.close()
-
-    return jsonify([dict(zip(columns, row)) for row in rows])
+    data = [dict(zip(columns, row)) for row in rows]
+    # Enviamos columnas y datos explícitamente
+    return jsonify({"columns": columns, "data": data})
 
 @app.route("/download", methods=["POST"])
 def download_data():
@@ -66,9 +58,7 @@ def download_data():
     writer.writerows(rows)
     output.seek(0)
 
-    cursor.execute(f"DELETE FROM {MYSQL_TABLE_NAME}")
-    cursor.execute(f"ALTER TABLE {MYSQL_TABLE_NAME} AUTO_INCREMENT = 1")
-
+    cursor.execute(f"TRUNCATE TABLE {MYSQL_TABLE_NAME}")
     connection.commit()
     cursor.close()
     connection.close()
@@ -79,7 +69,7 @@ def download_data():
         headers={"Content-Disposition": "attachment; filename=datos.csv"}
     )
 
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
