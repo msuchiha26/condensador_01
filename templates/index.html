@@ -2,96 +2,66 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Condensador de agua en funcionamiento</title>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+  <title>Dashboard de Sensores</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    async function fetchData() {
+      const response = await fetch("/api/data");
+      const data = await response.json();
+
+      const table = document.getElementById("data-table");
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+
+      // Limpiar tabla
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        thead.innerHTML = "<tr><th>No hay datos</th></tr>";
+        return;
+      }
+
+      // Construir cabecera dinámica
+      const headers = Object.keys(data[0]);
+      const headerRow = document.createElement("tr");
+      headers.forEach((key) => {
+        const th = document.createElement("th");
+        th.textContent = key;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+
+      // Agregar filas
+      data.forEach((row) => {
+        const tr = document.createElement("tr");
+        headers.forEach((key) => {
+          const td = document.createElement("td");
+          td.textContent = row[key];
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Actualizar cada 20 segundos
+    setInterval(fetchData, 20000);
+    window.onload = fetchData;
+  </script>
   <style>
-    body { font-family: sans-serif; padding: 20px; background-color: #f8f8f8; }
-    h1 { margin-bottom: 20px; }
-    .btn { margin-bottom: 20px; padding: 10px 15px; background-color: #007BFF; color: white; font-size: 16px; border: none; border-radius: 4px; cursor: pointer; }
-    .btn:hover { background-color: #0056b3; }
-    #mensaje { margin-top: 15px; color: #666; font-size: 15px; }
-    table.dataTable { width: 100% !important; }
+    body { font-family: sans-serif; padding: 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
   </style>
 </head>
 <body>
-  <h1>📈 Datos obtenidos</h1>
-  <button class="btn" onclick="descargarCSV()">⬇️ Descargar CSV y Vaciar</button>
-  <table id="tabla" class="display">
-    <thead><tr id="headers"></tr></thead>
-    <tbody id="datos"></tbody>
+  <h1>Últimos 10 Registros</h1>
+  <button onclick="window.location.href='/download_csv'">Descargar CSV</button>
+  <table id="data-table">
+    <thead></thead>
+    <tbody></tbody>
   </table>
-  <p id="mensaje">⏳ Cargando datos...</p>
-
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-  <script>
-    let tablaDataTable;
-
-    async function cargarDatos() {
-      try {
-        const res = await fetch("/api/data");
-        const json = await res.json();
-
-        const columnas = json.columns;
-        const data = json.data;
-
-        if (!data || data.length === 0) {
-          document.getElementById("mensaje").textContent = "⏳ No hay datos para mostrar.";
-          if (tablaDataTable) tablaDataTable.clear().draw();
-          return;
-        }
-
-        document.getElementById("mensaje").textContent = "";
-
-        if (!tablaDataTable) {
-          document.getElementById("headers").innerHTML =
-            columnas.map(h => `<th>${h}</th>`).join("");
-
-          tablaDataTable = $('#tabla').DataTable({
-            data: data,
-            columns: columnas.map(col => ({
-              data: col,
-              render: col === "timestamp"
-                ? function (data) {
-                    const fecha = new Date(data);
-                    return fecha.toLocaleString();
-                  }
-                : undefined
-            })),
-            pageLength: 10,
-            order: [[0, "desc"]],
-            language: { url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json" }
-          });
-        } else {
-          tablaDataTable.clear();
-          tablaDataTable.rows.add(data);
-          tablaDataTable.draw();
-        }
-      } catch (error) {
-        document.getElementById("mensaje").textContent = "⚠️ Error al cargar datos.";
-        console.error(error);
-      }
-    }
-
-    function descargarCSV() {
-      const clave = prompt("🔐 Ingresa la clave para descargar el CSV:");
-      if (!clave) return alert("⚠️ Clave requerida para descargar.");
-
-      const claveURL = new URLSearchParams({ key: clave.trim() }).toString();
-      document.getElementById("mensaje").textContent = "⬇️ Descargando CSV y vaciando datos...";
-      window.location.href = `/descargar_csv?${claveURL}`;
-      setTimeout(() => {
-        cargarDatos();
-        document.getElementById("mensaje").textContent = "";
-      }, 3000);
-    }
-
-    $(document).ready(() => {
-      cargarDatos();
-      setInterval(cargarDatos, 5000);
-    });
-  </script>
 </body>
 </html>
 
